@@ -39,5 +39,13 @@ report(
     #[#["ab?c", "abc"], true],
     #[#["a?b?c?", "abc"], true],
     #[#["x?y?z?", ""], true],
+    #[#["a*", ""], true],
+    #[#["a*", "aaaaaaaaaa"], true],
+    #[#["a*b", "aaaab"], true],
+    #[#["b.*th", "both"], true],
+    #[#["b.*th", "bath"], true],
+    #[#["b.*th$", "abath"], true],
+    #[#["^b.*th$", "abath"], false],
+    #[#["^b.*th$", "behemoth"], true],
   ],
 )

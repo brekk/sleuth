@@ -1,13 +1,12 @@
 import Char from "Char"
-import IO from "IO"
 import List from "List"
-import { Just, Nothing, fromMaybe } from "Maybe"
+import { Just } from "Maybe"
 import String from "String"
 
 
 
-_sliceToEnd :: Integer -> String -> String
-_sliceToEnd = (i, x) => String.slice(i, String.length(x), x)
+_sliceStringToEnd :: Integer -> String -> String
+_sliceStringToEnd = (i, x) => String.slice(i, String.length(x), x)
 
 _sliceListToEnd :: Integer -> List a -> List a
 _sliceListToEnd = (i, x) => List.slice(i, List.length(x), x)
@@ -15,42 +14,39 @@ _sliceListToEnd = (i, x) => List.slice(i, List.length(x), x)
 _matchChar :: Char -> Char -> Boolean
 _matchChar = (d, c) => d == '.' || d == c
 
-_matchQuestion :: List Char -> List Char -> Boolean
-_matchQuestion = (pattern, input) => {
+_matchSuffix :: Boolean -> List Char -> List Char -> Boolean
+_matchSuffix = (anything, pattern, input) => {
   post = _sliceListToEnd(2, pattern)
   return where(#[pattern, input]) {
-    #[[a, ...z], [a2, ...z2]] =>
-      do {
-        IO.pTrace("???", #[pattern, input, "vs", a, a2])
-        return _matchChar(a, a2)
-          && _matchCharList(post, _sliceListToEnd(1, input))
-          || _matchCharList(post, input)
-      }
+    #[[a, ..._], [a2, ...z2]] =>
+      (_matchChar(a, a2) && _matchCharList(anything ? pattern : post, z2))
+        || _matchCharList(post, input)
+
+    _ =>
+      _matchCharList(post, input)
   }
 }
+
+_matchStar = _matchSuffix(true)
+_matchQuestion = _matchSuffix(false)
 
 _matchCharList :: List Char -> List Char -> Boolean
 _matchCharList = (pattern, input) => {
   pLen = List.length(pattern)
   iLen = List.length(input)
-
-  return if (pLen == 1 && pattern == ['$'] && iLen == 0) {
+  suffix = List.nth(1, pattern)
+  return if (suffix == Just('?')) {
+    _matchQuestion(pattern, input)
+  } else if (suffix == Just('*')) {
+    _matchStar(pattern, input)
+  } else if (pLen == 1 && pattern == ['$'] && iLen == 0) {
     true
+  } else if (pLen > 0 && iLen == 0) {
+    false
   } else {
     where(#[pattern, input]) {
-      #[[a, b, ...z], [a2, ...z2]] =>
-        if (b == '?') do {
-          IO.pTrace("QUESTION!?!?", #[a, b, z, "<--->", a2, z2])
-          return _matchQuestion(pattern, input)
-        } else {
-          _matchChar(a, a2) && _matchCharList([b, ...z], z2)
-        }
-
       #[[a, ...z], [a2, ...z2]] =>
         _matchChar(a, a2) && _matchCharList(z, z2)
-
-      #[[a], [a2]] =>
-        _matchChar(a, a2)
 
       _ =>
         true
@@ -64,16 +60,8 @@ export match = (pattern, input) => pipe(
 )(String.toList(input))
 
 search :: String -> String -> Boolean
-export search = (pattern, input) => {
-  pLen = String.length(pattern)
-  iLen = String.length(input)
-  return if (String.startsWith("^", pattern)) {
-    match(_sliceToEnd(1, pattern), input)
-  } else {
-    pipe(
-      String.length,
-      List.range(0),
-      List.any((i) => match(pattern, _sliceToEnd(i, input))),
-    )(input)
-  }
+export search = (pattern, input) => if (String.startsWith("^", pattern)) {
+  match(_sliceStringToEnd(1, pattern), input)
+} else {
+  match(".*" ++ pattern, input)
 }
