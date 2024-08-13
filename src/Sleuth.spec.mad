@@ -1,0 +1,45 @@
+import { match, matchChar, matchCharList, search } from "@/Sleuth"
+import { caseN2, report } from "@/Test"
+
+
+
+report(
+  caseN2(matchChar),
+  "matchChar",
+  [#[#['.', 'x'], true], #[#['x', 'x'], true], #[#['y', '.'], false]],
+)
+
+report(
+  caseN2(match),
+  "match",
+  [
+    #[#["shi.", "shit"], true],
+    #[#["c.t", "cat"], true],
+    #[#["c.t", "cot"], true],
+    #[#["c.t", "bot"], false],
+    #[#["whatever", "whatever"], true],
+    #[#["whatever", ""], false],
+    #[#["", "whatever"], true],
+    #[#["whatever$", "whatever"], true],
+    #[#["what$", "what?"], false],
+    #[#["^what$", "what"], false],
+  ],
+)
+
+report(
+  caseN2(search),
+  "search",
+  [
+    #[#["shi.", "shit"], true],
+    #[#["c.t", "cat"], true],
+    #[#["c.t", "cot"], true],
+    #[#["c.t", "bot"], false],
+    #[#["whatever", "whatever"], true],
+    #[#["whatever", ""], false],
+    #[#["", "whatever"], true],
+    #[#["whatever$", "whatever"], true],
+    #[#["what$", "what?"], false],
+    #[#["^what$", "what"], true],
+    #[#["bc", "abcd"], true],
+  ],
+)
