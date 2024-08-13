@@ -6,76 +6,74 @@ import String from "String"
 
 
 
-// export type MatchKind = MatchNormal | MatchEmpty | MatchWildcard
-// export type Match = Match(MatchKind, Char)
-//
-// export wildcard = Match(MatchWildcard, '.')
-// export empty = Match(MatchEmpty, '?')
-//
-// export isWildcard = where {
-//   Match(MatchWildcard, _) => true
-//   _ => false
-// }
-//
-// export isEmpty = where {
-//   Match(MatchEmpty, _) => true
-//   _ => false
-// }
-//
-// matchChar :: Match -> Char -> Boolean
-// export matchChar = (m, c) => where (m) {
-//   Match(MatchEmpty, _) => true
-//   Match(MatchWildcard, _) => true
-//   Match(_, d) => d == c
-// }
+_sliceToEnd :: Integer -> String -> String
+_sliceToEnd = (i, x) => String.slice(i, String.length(x), x)
 
-matchChar :: Char -> Char -> Boolean
-export matchChar = (d, c) => d == '.' || d == c
+_sliceListToEnd :: Integer -> List a -> List a
+_sliceListToEnd = (i, x) => List.slice(i, List.length(x), x)
 
-matchCharList :: List Char -> List Char -> Boolean
-export matchCharList = (pattern, input) => {
+_matchChar :: Char -> Char -> Boolean
+_matchChar = (d, c) => d == '.' || d == c
+
+_matchQuestion :: List Char -> List Char -> Boolean
+_matchQuestion = (pattern, input) => {
+  post = _sliceListToEnd(2, pattern)
+  return where(#[pattern, input]) {
+    #[[a, ...z], [a2, ...z2]] =>
+      do {
+        IO.pTrace("???", #[pattern, input, "vs", a, a2])
+        return _matchChar(a, a2)
+          && _matchCharList(post, _sliceListToEnd(1, input))
+          || _matchCharList(post, input)
+      }
+  }
+}
+
+_matchCharList :: List Char -> List Char -> Boolean
+_matchCharList = (pattern, input) => {
   pLen = List.length(pattern)
   iLen = List.length(input)
 
   return if (pLen == 1 && pattern == ['$'] && iLen == 0) {
     true
-  } else if (pLen == 0 && iLen != 0) {
-    true
-  } else if (iLen == 0 && pLen != 0) {
-    false
   } else {
     where(#[pattern, input]) {
-      #[_, []] =>
-        true
+      #[[a, b, ...z], [a2, ...z2]] =>
+        if (b == '?') do {
+          IO.pTrace("QUESTION!?!?", #[a, b, z, "<--->", a2, z2])
+          return _matchQuestion(pattern, input)
+        } else {
+          _matchChar(a, a2) && _matchCharList([b, ...z], z2)
+        }
 
       #[[a, ...z], [a2, ...z2]] =>
-        matchChar(a, a2) && matchCharList(z, z2)
+        _matchChar(a, a2) && _matchCharList(z, z2)
+
+      #[[a], [a2]] =>
+        _matchChar(a, a2)
+
+      _ =>
+        true
     }
   }
 }
 
 match :: String -> String -> Boolean
 export match = (pattern, input) => pipe(
-  matchCharList(String.toList(pattern)),
+  _matchCharList(String.toList(pattern)),
 )(String.toList(input))
 
-_sliceToEnd :: Integer -> String -> String
-_sliceToEnd = (i, x) => String.slice(i, String.length(x), x)
-
 search :: String -> String -> Boolean
-export search = (pattern, input) => if (String.startsWith("^", pattern)) {
-  match(_sliceToEnd(1, pattern), input)
-} else {
-  pipe(
-    String.length,
-    List.range(0),
-    List.any(
-      (i) => {
-        segment = _sliceToEnd(i, input)
-        matched = match(pattern, segment)
-        IO.pTrace("checking", #[i, pattern, segment, matched])
-        return matched
-      },
-    ),
-  )(input)
+export search = (pattern, input) => {
+  pLen = String.length(pattern)
+  iLen = String.length(input)
+  return if (String.startsWith("^", pattern)) {
+    match(_sliceToEnd(1, pattern), input)
+  } else {
+    pipe(
+      String.length,
+      List.range(0),
+      List.any((i) => match(pattern, _sliceToEnd(i, input))),
+    )(input)
+  }
 }

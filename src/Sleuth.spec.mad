@@ -1,13 +1,7 @@
-import { match, matchChar, matchCharList, search } from "@/Sleuth"
+import { match, search } from "@/Sleuth"
 import { caseN2, report } from "@/Test"
 
 
-
-report(
-  caseN2(matchChar),
-  "matchChar",
-  [#[#['.', 'x'], true], #[#['x', 'x'], true], #[#['y', '.'], false]],
-)
 
 report(
   caseN2(match),
@@ -41,5 +35,9 @@ report(
     #[#["what$", "what?"], false],
     #[#["^what$", "what"], true],
     #[#["bc", "abcd"], true],
+    #[#["ab?c", "ac"], true],
+    #[#["ab?c", "abc"], true],
+    #[#["a?b?c?", "abc"], true],
+    #[#["x?y?z?", ""], true],
   ],
 )
