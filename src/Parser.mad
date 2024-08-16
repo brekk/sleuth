@@ -1,0 +1,145 @@
+import type { Maybe } from "Maybe"
+
+import {} from "Integer"
+import List from "List"
+import { Just, Nothing, fromMaybe } from "Maybe"
+import P from "Parse"
+import String from "String"
+
+
+
+export type Quantifier
+  = RepeatExact(Integer)
+  | RepeatMinimum(Integer)
+  | RepeatRange(Integer, Integer)
+  | MoreThanZero
+  | MoreThanOne
+  | Optional
+
+export type Character
+  // .
+  = AnyChar
+  // any regular character
+  | DefChar(Char)
+  // a|b
+  | AltChar(Char, Char)
+  // [a-f]
+  | RangeOfChars(Char, Char)
+  // [axYS]
+  | OneCharOf(List Char)
+  // [^axYS]
+  | NotOneCharOf(List Char)
+  // \d
+  | Digit
+  // \D
+  | NonDigit
+  // \s
+  | WhitespaceChar
+  // \S
+  | NonWhitespaceChar
+  // \w
+  | WordChar
+  // \W
+  | NonWordChar
+  // \A
+  | EscapedStart
+  // \Z
+  | EscapedEnd
+  // \b
+  | WordBoundary
+  // \B
+  | NonWordBoundary
+  // \G
+  | MatchStart
+  // \n
+  | Newline
+  // \r
+  | CarriageReturn
+  // \t
+  | Tab
+  // \0
+  | NullChar
+  // \YYY
+  | Octal(Char, Char, Char)
+  // \xYY or \x{YY}
+  | Hexadecimal(Char, Char)
+  // \cY
+  | ControlChar(Char)
+
+export type Flag = IgnoreCase | Multiline | AnyNewline | AllowWhitespace | DuplicateGroup | Ungreedy
+
+// export type Posix
+//   // [:alnum:]
+//   = Alphanumeric
+//   // [:ascii:]
+//   | Ascii
+//   // [:cntrl:]
+//   | Control
+//   // [:digit:]
+//   | Decimal
+//   // [:xdigit:]
+//   | HexadecimalPosix
+//   // [:alpha:]
+//   | Letters
+//   // [:lower:]
+//   | Lowercase
+//   // [:punct:]
+//   | Punctuation
+//   // [:blank:]
+//   | SpaceTab
+//   // [:upper:]
+//   | Uppercase
+//   // [:print:]
+//   | Visible
+//   // [:graph:]
+//   | VisibleNoSpace
+//   // [:space:]
+//   | Whitespace
+//   // [:word:]
+//   | Word
+
+export type Clue = Clues(List Clue) | Sequence(List Character, Quantifier)
+
+export alias Expression = List Clue
+
+star :: P.Parser Char
+export star = P.char('*')
+
+question :: P.Parser Char
+export question = P.char('?')
+
+wildcard :: P.Parser Char
+export wildcard = P.char('.')
+
+int :: P.Parser (Maybe Integer)
+int = pipe(
+  P.some,
+  map(
+    pipe(
+      String.fromList,
+      scan,
+    ),
+  ),
+)(P.digit)
+
+range :: P.Parser Quantifier
+export range = do {
+  _ <- P.char('{')
+  _a <- int
+  comma <- map(Just, P.char(',')) <|> of(Nothing)
+  _z <- int
+  _ <- P.char('}')
+  return where(#[_a, comma, _z]) {
+    #[Just(a), Just(_), Just(z)] =>
+      of(RepeatRange(a, z))
+
+    #[Just(a), Just(_), Nothing] =>
+      of(RepeatMinimum(a))
+
+    #[Just(a), Nothing, Nothing] =>
+      of(RepeatExact(a))
+
+    _ =>
+      P.fail
+  }
+}
